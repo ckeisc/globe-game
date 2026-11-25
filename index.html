@@ -49,7 +49,8 @@ button{font:inherit;cursor:pointer}
    OVERLAYS the stage (absolute, out of flow, pointer-events none so
    globe drags pass through it) and its backdrop is a CONCAVE horizon
    contour that FADES OUT completely — there is no drawn edge at all.
-   The backdrop lives on ::before (solid --hud) shaped only by a
+   The backdrop lives on a dedicated background-only element
+   (.topbar-bg, solid --hud) shaped only by a
    MASK: a radial-gradient ellipse centred far below the bar
    (50% 260%). One contour of that ellipse passes through the arc
    points (centre 79% height, corners 100%) — along that whole
@@ -67,13 +68,21 @@ button{font:inherit;cursor:pointer}
    across the middle of the fade. No clip-path anywhere now, and no
    border line: nothing is cut, the colour simply runs out. The
    concave area stays short for a subtle effect: ~21px below the
-   text, the arc rising only ~8px at the centre. The mask is on
-   ::before only, so the title text itself is never masked. */
+   text, the arc rising only ~8px at the centre. The mask lives
+   ONLY on .topbar-bg, a separate empty element that holds no
+   text at all; the title renders in a sibling layer above it
+   with no mask and full opacity, so no glyph is ever faded.
+   (An earlier version kept the mask on the bar's ::before and
+   iOS Safari still rasterised the title together with the
+   masked layer, dropping subpixel antialiasing — the glyphs
+   read as blurry even though they were never masked directly.
+   A real background-only element keeps the text in its own
+   unmasked layer.) */
 .topbar{position:absolute;top:0;left:0;right:0;z-index:5;color:#fff;padding:0 16px 16px;pointer-events:none}
-.topbar::before{content:"";position:absolute;inset:0;background:rgb(var(--hud-rgb));pointer-events:none;-webkit-mask-image:radial-gradient(ellipse 125% 212% at 50% 260%, transparent 85.4%, #000 100%);mask-image:radial-gradient(ellipse 125% 212% at 50% 260%, transparent 85.4%, #000 100%)}
-.tline{display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;position:relative}
+.topbar-bg{position:absolute;inset:0;background:rgb(var(--hud-rgb));pointer-events:none;-webkit-mask-image:radial-gradient(ellipse 125% 212% at 50% 260%, transparent 85.4%, #000 100%);mask-image:radial-gradient(ellipse 125% 212% at 50% 260%, transparent 85.4%, #000 100%)}
+.tline{display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;position:relative;z-index:1}
 .tline1{min-height:24px;align-items:flex-start}
-.tline1 h1{font-size:16px;line-height:1.2;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:800;text-align:center}
+.tline1 h1{font-size:16px;line-height:1.2;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:800;text-align:center;-webkit-font-smoothing:subpixel-antialiased;text-rendering:optimizeLegibility}
 .dots{display:flex;gap:4px;flex-shrink:0;align-items:center;position:absolute;right:0;top:50%;transform:translateY(-50%)}
 .dot{width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.35);display:grid;place-items:center;font-size:10px;background:rgba(255,255,255,.08);color:#fff}
 .dot.done{background:#dcfce7;border-color:#86efac;color:#14532d}
@@ -104,8 +113,12 @@ button{font:inherit;cursor:pointer}
 .icon-btn.live .info-badge{display:block}
 .srcdetail{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.5;color:var(--ink)}
 .srcdetail b{font-size:14px}
-/* BOTTOM BAR — one line, icon-only */
-.bottombar{background:var(--panel);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:2px;padding:6px 8px calc(6px + env(safe-area-inset-bottom));z-index:6;flex-shrink:0}
+/* BOTTOM BAR — one line, icon-only. The bar HUGS the buttons:
+   4px of fixed padding above and below the 44px touch targets,
+   and the device safe-area inset is applied ONLY as extra bottom
+   inset (never as a large fixed padding, never counted twice) —
+   total height is 52px + the real inset, nothing more. */
+.bottombar{background:var(--panel);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:2px;padding:4px 8px calc(4px + env(safe-area-inset-bottom, 0px));z-index:6;flex-shrink:0}
 .icon-btn{position:relative;flex:1;max-width:54px;height:44px;min-height:44px;border-radius:999px;border:0;background:transparent;font-size:22px;line-height:1;display:grid;place-items:center;color:var(--ink);padding:0}
 .icon-btn.active{background:var(--chip);box-shadow:inset 0 0 0 2px var(--accent)}
 .icon-btn.disabled{opacity:.25;pointer-events:none}
@@ -251,6 +264,7 @@ body.street-open .bottombar{position:relative;z-index:25}
 <div class="app">
   <!-- TOP BAR: single line — question / title + treasure dots -->
   <div class="topbar">
+    <div class="topbar-bg" aria-hidden="true"></div>
     <div class="tline tline1">
       <h1 id="pTitle">Explore the Earth</h1>
       <span class="dots" id="dots" style="display:none"></span>
