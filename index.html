@@ -44,8 +44,34 @@
 // the stage, and runs a watchdog — if the 3D globe has not booted
 // shortly after load, the 2D flat-map fallback (defined after the
 // main script) is started instead, so the game is always usable.
-window.__globeBuild='v67';
+window.__globeBuild='v69';
 window.__globeBooted=false;window.__globeFallbackActive=false;window.__globeBootStage='libs';window.__globeErrors=[];
+// PWA STANDALONE DETECTION (v69) — yes, an installed home-screen
+// app CAN be detected, two ways, and this page uses both:
+//   1. CSS: @media (display-mode: standalone) matches only when
+//      the page runs as an installed app, never in a browser tab.
+//   2. JS: matchMedia('(display-mode: standalone)') says the
+//      same thing to code, and iOS Safari additionally exposes
+//      navigator.standalone === true in standalone (the media
+//      query alone was unreliable there on older iOS).
+// Either signal adds the .pwa class to <html> before first
+// paint; window.__globePwa says which world the page is in, so
+// standalone can take its own code paths. Its first job: iOS 26
+// blurs a ~107pt Liquid Glass band across the top of standalone
+// web apps and offers no opt-out (native apps hide it via
+// scrollView.topEdgeEffect.isHidden; the web has no switch), so
+// in standalone the top-anchored UI shifts below the band — see
+// --topshift in the stylesheet. Browser tabs are untouched.
+window.__globePwa=false;
+try{
+  var _mq=window.matchMedia('(display-mode: standalone)'),_fmq=window.matchMedia('(display-mode: fullscreen)');
+  var _isPwa=function(){return !!((_mq&&_mq.matches)||(_fmq&&_fmq.matches)||window.navigator.standalone===true);};
+  var _applyPwa=function(){window.__globePwa=_isPwa();document.documentElement.classList.toggle('pwa',window.__globePwa);};
+  _applyPwa();
+  var _onMode=function(){_applyPwa();};
+  if(_mq){if(_mq.addEventListener)_mq.addEventListener('change',_onMode);else if(_mq.addListener)_mq.addListener(_onMode);}
+  if(_fmq){if(_fmq.addEventListener)_fmq.addEventListener('change',_onMode);else if(_fmq.addListener)_fmq.addListener(_onMode);}
+}catch(_){}
 window.addEventListener('error',function(e){try{window.__globeErrors.push(String((e&&e.message)||e));}catch(_){}});
 window.__globeHideBootOverlay=function(){var o=document.getElementById('bootOverlay');if(o){o.classList.add('hide');setTimeout(function(){if(o.parentNode)o.parentNode.removeChild(o);if(window.__globeRerasterTitle)window.__globeRerasterTitle();},450);}};
 // TITLE RE-RASTER (v61, hardened v62): iOS Safari rasterises the
@@ -91,6 +117,24 @@ window.__globeWatchdog=setTimeout(function(){
   --accent:#0f766e; --accent2:#d97706; --gold:#f59e0b; --good:#15803d; --bad:#dc2626;
   --chip:#eef4ee; --shadow:0 10px 30px rgba(20,40,25,.14);
   --hud:#0f1f2e; --hud-rgb:15,31,46;
+  /* PWA TOP SHIFT (v69) — 0 in a browser tab. In standalone
+     (installed home-screen app) it becomes the depth of the
+     iOS 26 Liquid Glass blur band, and every top-anchored
+     element (top bar + its backdrop, feedback toast, the
+     context-lost banner, Street View's card / close / compass)
+     adds it to its top offset, so no text or control ever sits
+     inside the band. The band is a gradient measured at ~107pt
+     deep on a 16 Pro Max — roughly 45pt past the safe-area
+     inset — so the shift is the safe-area inset + 64px with a
+     118px floor: on that phone 59 + 64 = 123px, on notch
+     phones the 118px floor governs. The strip above the bar
+     shows the globe itself, which the glass can blur harmlessly
+     — it carries no text. Set from two places that must agree:
+     the display-mode media query below (pure CSS, applies at
+     first paint) and the html.pwa class (set by the boot
+     guard's JS detection, which also covers iOS versions where
+     the media query does not fire in standalone). */
+  --topshift:0px;
 }
 @media (prefers-color-scheme: dark){
   :root{ --bg:#0a141f; --panel:#122231; --panel2:#162a3d; --ink:#eef6f1; --muted:#9fb3a8; --line:#23405a; --chip:#1a344c; --shadow:0 10px 30px rgba(0,0,0,.45); --hud:#0a1826; --hud-rgb:10,24,38; }
@@ -101,11 +145,18 @@ html{overscroll-behavior:none}
    browser chrome: the app owns the full viewport (viewport-fit=
    cover is already set, and the bars already pad themselves with
    env(safe-area-inset-*)), and no pull-to-refresh or scroll
-   chaining may move the shell. */
+   chaining may move the shell. v69: standalone also raises
+   --topshift so the top-anchored UI clears the iOS 26 Liquid
+   Glass blur band (see the --topshift note in :root); the
+   html.pwa rule right after repeats the same value for the
+   JS-detected path. In a browser tab neither applies and the
+   layout is exactly as before. */
 @media (display-mode: standalone){
+  :root{--topshift:max(118px, calc(env(safe-area-inset-top, 0px) + 64px))}
   body{overscroll-behavior:none}
   .app{height:100dvh}
 }
+html.pwa{--topshift:max(118px, calc(env(safe-area-inset-top, 0px) + 64px))}
 body{margin:0;font-family:ui-rounded, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;background:var(--hud);color:var(--ink);overflow:hidden;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none}
 button{font:inherit;cursor:pointer}
 .app{height:100dvh;display:flex;flex-direction:column;position:relative}
@@ -171,8 +222,8 @@ button{font:inherit;cursor:pointer}
    a permanent translateZ(0) (see .tline1 h1 below) so it always
    lives in its own full-resolution layer, and the re-raster
    re-runs on later beats after boot (see __globeRerasterTitle). */
-.topbar{position:absolute;top:0;left:0;right:0;z-index:5;color:#fff;padding:0 16px 16px;pointer-events:none;isolation:isolate}
-.topbar-bg{position:absolute;top:0;left:0;right:0;height:40px;z-index:4;background:rgb(var(--hud-rgb));pointer-events:none;-webkit-mask-image:radial-gradient(ellipse 125% 212% at 50% 260%, transparent 85.4%, #000 100%);mask-image:radial-gradient(ellipse 125% 212% at 50% 260%, transparent 85.4%, #000 100%)}
+.topbar{position:absolute;top:var(--topshift);left:0;right:0;z-index:5;color:#fff;padding:0 16px 16px;pointer-events:none;isolation:isolate}
+.topbar-bg{position:absolute;top:var(--topshift);left:0;right:0;height:40px;z-index:4;background:rgb(var(--hud-rgb));pointer-events:none;-webkit-mask-image:radial-gradient(ellipse 125% 212% at 50% 260%, transparent 85.4%, #000 100%);mask-image:radial-gradient(ellipse 125% 212% at 50% 260%, transparent 85.4%, #000 100%)}
 .tline{display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;position:relative;z-index:1}
 .tline1{min-height:24px;align-items:flex-start}
 /* The title's translateZ(0) is PERMANENT (v62): it keeps the
@@ -203,8 +254,8 @@ button{font:inherit;cursor:pointer}
    engines with weak text-stroke support. */
 .lab{position:absolute;transform:translate(-50%,-130%);background:transparent;color:#fff;font-size:11px;font-weight:800;letter-spacing:.05em;padding:2px 4px;white-space:nowrap;border:none;-webkit-text-stroke:1px #000;paint-order:stroke fill;text-shadow:-1px 0 0 #000,1px 0 0 #000,0 -1px 0 #000,0 1px 0 #000,-.75px -.75px 0 #000,.75px -.75px 0 #000,-.75px .75px 0 #000,.75px .75px 0 #000,-1px -.5px 0 #000,1px -.5px 0 #000,-1px .5px 0 #000,1px .5px 0 #000,-.5px -1px 0 #000,.5px -1px 0 #000,-.5px 1px 0 #000,.5px 1px 0 #000}
 .lab.small{font-size:10px;opacity:.9}
-.feedback{position:absolute;top:64px;left:50%;transform:translateX(-50%);background:#fff;color:#111827;font-weight:900;font-size:14px;padding:10px 14px;border-radius:999px;box-shadow:0 10px 24px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:.25s;max-width:92%;text-align:center;z-index:3}
-.feedback.show{opacity:1;top:68px}
+.feedback{position:absolute;top:calc(64px + var(--topshift));left:50%;transform:translateX(-50%);background:#fff;color:#111827;font-weight:900;font-size:14px;padding:10px 14px;border-radius:999px;box-shadow:0 10px 24px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:.25s;max-width:92%;text-align:center;z-index:3}
+.feedback.show{opacity:1;top:calc(68px + var(--topshift))}
 .feedback.good{background:#dcfce7} .feedback.bad{background:#fee2e2}
 /* ATTRIBUTION — low-key, small, bottom-right of the stage; text is set from the active source's attribution (bundled NASA texture or the streaming provider) */
 .attrib{position:absolute;right:10px;bottom:8px;z-index:2;font-size:10px;line-height:1.3;color:rgba(255,255,255,.6);text-shadow:0 1px 3px rgba(0,0,0,.65);pointer-events:none;text-align:right;max-width:72%}
@@ -298,7 +349,7 @@ body.street-open .bottombar{position:relative;z-index:25}
 .detail b{font-size:14px} .detail p{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
 .detail button{flex-shrink:0}
 .viewhint{font-size:12.5px;color:var(--muted);margin:8px 2px 0;line-height:1.4}
-/* BUILD MARKER (v67) — tiny version + updated-date line at the
+/* BUILD MARKER (v69) — tiny version + updated-date line at the
    foot of the Info sheet, so a screenshot of Info shows exactly
    which build is running and when it was updated; that is how
    an installed PWA serving stale cached code is told apart
@@ -319,12 +370,12 @@ body.street-open .bottombar{position:relative;z-index:25}
 .sv-state .sv-box b{display:block;font-size:16.5px;margin:8px 0 4px}
 .sv-state .sv-box p{margin:0 0 12px;font-size:13.5px;line-height:1.5;color:#5f6368}
 .sv-state .sv-box .btn{min-height:42px}
-.sv-card{position:absolute;top:10px;left:10px;max-width:min(78vw,340px);background:#fff;color:#202124;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.35);padding:9px 12px 8px;pointer-events:none}
+.sv-card{position:absolute;top:calc(10px + var(--topshift));left:10px;max-width:min(78vw,340px);background:#fff;color:#202124;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.35);padding:9px 12px 8px;pointer-events:none}
 .sv-card b{display:block;font-size:14.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sv-card span{display:block;font-size:12px;color:#5f6368;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sv-close{position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(32,33,36,.72);color:#fff;font-size:17px;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.sv-close{position:absolute;top:calc(10px + var(--topshift));right:10px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(32,33,36,.72);color:#fff;font-size:17px;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.3)}
 .sv-close:active{transform:scale(.93)}
-.sv-compass{position:absolute;right:10px;top:60px;width:44px;height:44px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3);display:grid;place-items:center;border:0;padding:0}
+.sv-compass{position:absolute;right:10px;top:calc(60px + var(--topshift));width:44px;height:44px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3);display:grid;place-items:center;border:0;padding:0}
 .sv-compass svg{display:block;transition:transform .08s linear}
 /* IN-VIEW DIRECTION ARROWS — Google Street View style: a chevron is
    drawn INSIDE the panorama at the screen position that corresponds to
@@ -356,7 +407,7 @@ body.street-open .bottombar{position:relative;z-index:25}
 /* WEBGL CONTEXT-LOST BANNER — shown if the graphics context drops
    mid-session (a known iOS/WebKit failure); offers a reload instead
    of leaving a frozen canvas. */
-.gllost{position:absolute;top:52px;left:50%;transform:translateX(-50%);z-index:9;display:none;align-items:center;gap:10px;background:rgba(17,24,39,.94);color:#fff;font-size:13.5px;font-weight:700;padding:9px 10px 9px 14px;border-radius:999px;box-shadow:0 10px 24px rgba(0,0,0,.35);max-width:92%}
+.gllost{position:absolute;top:calc(52px + var(--topshift));left:50%;transform:translateX(-50%);z-index:9;display:none;align-items:center;gap:10px;background:rgba(17,24,39,.94);color:#fff;font-size:13.5px;font-weight:700;padding:9px 10px 9px 14px;border-radius:999px;box-shadow:0 10px 24px rgba(0,0,0,.35);max-width:92%}
 .gllost.show{display:flex}
 .gllost button{flex-shrink:0;border:0;border-radius:999px;background:#f59e0b;color:#111827;font-weight:800;font-size:13px;padding:8px 12px;min-height:36px}
 @media (min-width:700px){
@@ -494,7 +545,7 @@ body.street-open .bottombar{position:relative;z-index:25}
   </div>
   <h3>Install the app</h3>
   <p class="viewhint">On iPhone or iPad: open this page in Safari, tap the Share button, then tap “Add to Home Screen” — Globe Game then opens fullscreen like a regular app, with no browser bars. On Android or in Chrome, choose “Install app” or “Add to Home screen” from the browser menu instead.</p>
-  <p class="buildmark">Globe Game · build v68 · updated 2026-11-26</p>
+  <p class="buildmark">Globe Game · build v69 · updated 2026-11-26</p>
 </div>
 
 <!-- STREET VIEW — real street-level photos from Panoramax & KartaView -->
