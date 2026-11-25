@@ -19,7 +19,22 @@
 // main script) is started instead, so the game is always usable.
 window.__globeBooted=false;window.__globeFallbackActive=false;window.__globeBootStage='libs';window.__globeErrors=[];
 window.addEventListener('error',function(e){try{window.__globeErrors.push(String((e&&e.message)||e));}catch(_){}});
-window.__globeHideBootOverlay=function(){var o=document.getElementById('bootOverlay');if(o){o.classList.add('hide');setTimeout(function(){if(o.parentNode)o.parentNode.removeChild(o);},450);}};
+window.__globeHideBootOverlay=function(){var o=document.getElementById('bootOverlay');if(o){o.classList.add('hide');setTimeout(function(){if(o.parentNode)o.parentNode.removeChild(o);if(window.__globeRerasterTitle)window.__globeRerasterTitle();},450);}};
+// TITLE RE-RASTER (v61): iOS Safari rasterises the top-bar title
+// once at load — while WebGL is starting and the boot overlay is
+// lifting — at low quality / without subpixel AA, and caches that
+// blurry bitmap because the static title layer over the animating
+// canvas is never invalidated. (Opening the overflow menu used
+// to fix it by accident: its full-screen layers force a page-wide
+// re-composite and a sharp re-raster.) This is called once, from
+// __globeHideBootOverlay, which both boot paths invoke right
+// after the first frame renders — so by the time it runs the
+// overlay has lifted AND a globe frame is on screen. Two rAFs
+// let the post-overlay composite settle, then a throwaway
+// translateZ(0) + forced reflow makes Safari throw away the
+// cached raster and paint the glyphs fresh; the transform is
+// removed on the next frame.
+window.__globeRerasterTitle=function(){if(window.__globeTitleRerastered)return;window.__globeTitleRerastered=true;var t=document.getElementById('pTitle');if(!t)return;requestAnimationFrame(function(){requestAnimationFrame(function(){t.style.transform='translateZ(0)';void t.offsetWidth;requestAnimationFrame(function(){t.style.transform='';});});});};
 window.__globeShowBootError=function(msg){var o=document.getElementById('bootOverlay');if(!o)return;o.classList.remove('hide');var m=document.getElementById('bootMsg');if(m)m.textContent=msg||'The globe could not start';var s=document.getElementById('bootSub');if(s)s.textContent='Showing the flat map instead — everything still works, just without the 3D globe.';};
 window.__globeWatchdog=setTimeout(function(){
   if(window.__globeBooted||window.__globeFallbackActive)return;
@@ -77,9 +92,24 @@ button{font:inherit;cursor:pointer}
    masked layer, dropping subpixel antialiasing — the glyphs
    read as blurry even though they were never masked directly.
    A real background-only element keeps the text in its own
-   unmasked layer.) */
-.topbar{position:absolute;top:0;left:0;right:0;z-index:5;color:#fff;padding:0 16px 16px;pointer-events:none}
-.topbar-bg{position:absolute;inset:0;background:rgb(var(--hud-rgb));pointer-events:none;-webkit-mask-image:radial-gradient(ellipse 125% 212% at 50% 260%, transparent 85.4%, #000 100%);mask-image:radial-gradient(ellipse 125% 212% at 50% 260%, transparent 85.4%, #000 100%)}
+   unmasked layer.)
+   v61: even as a real element, .topbar-bg as a CHILD of .topbar
+   still left the title blurry on iOS until the overflow menu
+   opened: Safari flattened parent + masked child into one
+   compositing layer and cached a low-quality raster of it made
+   at load (while WebGL was starting and the boot overlay was
+   lifting); opening the menu's full-screen layers forced a
+   re-composite and a sharp re-raster that then stuck. So
+   .topbar-bg now lives OUTSIDE .topbar entirely — a sibling
+   positioned over the same 40px box (24px text row + 16px
+   bottom padding) at z-index 4, just below the bar — .topbar
+   gets isolation:isolate so the title layer can never be
+   flattened with the masked layer, and the boot guard forces
+   one title re-raster after the overlay lifts and the first
+   frame has rendered (see __globeRerasterTitle), reproducing
+   at load what opening the menu used to do by accident. */
+.topbar{position:absolute;top:0;left:0;right:0;z-index:5;color:#fff;padding:0 16px 16px;pointer-events:none;isolation:isolate}
+.topbar-bg{position:absolute;top:0;left:0;right:0;height:40px;z-index:4;background:rgb(var(--hud-rgb));pointer-events:none;-webkit-mask-image:radial-gradient(ellipse 125% 212% at 50% 260%, transparent 85.4%, #000 100%);mask-image:radial-gradient(ellipse 125% 212% at 50% 260%, transparent 85.4%, #000 100%)}
 .tline{display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;position:relative;z-index:1}
 .tline1{min-height:24px;align-items:flex-start}
 .tline1 h1{font-size:16px;line-height:1.2;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:800;text-align:center;-webkit-font-smoothing:subpixel-antialiased;text-rendering:optimizeLegibility}
@@ -262,9 +292,12 @@ body.street-open .bottombar{position:relative;z-index:25}
 </head>
 <body>
 <div class="app">
-  <!-- TOP BAR: single line — question / title + treasure dots -->
+  <!-- TOP BAR: single line — question / title + treasure dots.
+       The masked backdrop (.topbar-bg) is a SIBLING of .topbar,
+       never its child, so iOS Safari cannot flatten it together
+       with the title text into one compositing layer. -->
+  <div class="topbar-bg" aria-hidden="true"></div>
   <div class="topbar">
-    <div class="topbar-bg" aria-hidden="true"></div>
     <div class="tline tline1">
       <h1 id="pTitle">Explore the Earth</h1>
       <span class="dots" id="dots" style="display:none"></span>
