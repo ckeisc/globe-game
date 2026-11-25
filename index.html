@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"/>
 <meta name="color-scheme" content="light dark"/>
 <meta name="description" content="Explore a 3D Earth, fly to places, drop into Street View, and play Find It and Treasure Hunt on the globe."/>
-<!-- PWA (v64) — everything an installed home-screen app needs.
+<!-- PWA (v64; icon redesigned v65) — everything an installed home-screen app needs.
      The manifest lives in assets/ because only index.html and
      assets/ are served; its start_url / scope / icon paths are
      relative, so the same manifest works at any mount path (the
@@ -43,7 +43,7 @@
 // the stage, and runs a watchdog — if the 3D globe has not booted
 // shortly after load, the 2D flat-map fallback (defined after the
 // main script) is started instead, so the game is always usable.
-window.__globeBuild='v64';
+window.__globeBuild='v65';
 window.__globeBooted=false;window.__globeFallbackActive=false;window.__globeBootStage='libs';window.__globeErrors=[];
 window.addEventListener('error',function(e){try{window.__globeErrors.push(String((e&&e.message)||e));}catch(_){}});
 window.__globeHideBootOverlay=function(){var o=document.getElementById('bootOverlay');if(o){o.classList.add('hide');setTimeout(function(){if(o.parentNode)o.parentNode.removeChild(o);if(window.__globeRerasterTitle)window.__globeRerasterTitle();},450);}};
@@ -297,7 +297,7 @@ body.street-open .bottombar{position:relative;z-index:25}
 .detail b{font-size:14px} .detail p{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
 .detail button{flex-shrink:0}
 .viewhint{font-size:12.5px;color:var(--muted);margin:8px 2px 0;line-height:1.4}
-/* BUILD MARKER (v64) — tiny version + updated-date line at the
+/* BUILD MARKER (v65) — tiny version + updated-date line at the
    foot of the Info sheet, so a screenshot of Info shows exactly
    which build is running and when it was updated; that is how
    an installed PWA serving stale cached code is told apart
@@ -493,7 +493,7 @@ body.street-open .bottombar{position:relative;z-index:25}
   </div>
   <h3>Install the app</h3>
   <p class="viewhint">On iPhone or iPad: open this page in Safari, tap the Share button, then tap “Add to Home Screen” — Globe Game then opens fullscreen like a regular app, with no browser bars. On Android or in Chrome, choose “Install app” or “Add to Home screen” from the browser menu instead.</p>
-  <p class="buildmark">Globe Game · build v64 · updated 2026-11-26</p>
+  <p class="buildmark">Globe Game · build v65 · updated 2026-11-26</p>
 </div>
 
 <!-- STREET VIEW — real street-level photos from Panoramax & KartaView -->
