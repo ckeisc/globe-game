@@ -17,7 +17,7 @@
 // the stage, and runs a watchdog — if the 3D globe has not booted
 // shortly after load, the 2D flat-map fallback (defined after the
 // main script) is started instead, so the game is always usable.
-window.__globeBuild='v62';
+window.__globeBuild='v63';
 window.__globeBooted=false;window.__globeFallbackActive=false;window.__globeBootStage='libs';window.__globeErrors=[];
 window.addEventListener('error',function(e){try{window.__globeErrors.push(String((e&&e.message)||e));}catch(_){}});
 window.__globeHideBootOverlay=function(){var o=document.getElementById('bootOverlay');if(o){o.classList.add('hide');setTimeout(function(){if(o.parentNode)o.parentNode.removeChild(o);if(window.__globeRerasterTitle)window.__globeRerasterTitle();},450);}};
@@ -261,12 +261,13 @@ body.street-open .bottombar{position:relative;z-index:25}
 .detail b{font-size:14px} .detail p{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
 .detail button{flex-shrink:0}
 .viewhint{font-size:12.5px;color:var(--muted);margin:8px 2px 0;line-height:1.4}
-/* BUILD MARKER (v62) — tiny version line at the foot of the Info
-   sheet, so a screenshot of Info shows exactly which build is
-   running; that is how an installed PWA serving stale cached
-   code is told apart from the current build. Bump the number
-   (here, in the Info sheet, and in window.__globeBuild) with
-   every build. */
+/* BUILD MARKER (v63) — tiny version + updated-date line at the
+   foot of the Info sheet, so a screenshot of Info shows exactly
+   which build is running and when it was updated; that is how
+   an installed PWA serving stale cached code is told apart
+   from the current build. Bump the number and the date (here,
+   in the Info sheet, and in window.__globeBuild) with every
+   build. */
 .buildmark{margin:18px 0 2px;text-align:center;font-size:11px;color:var(--muted)}
 /* STREET VIEW — Google Maps style panorama overlay */
 .street{position:fixed;inset:0;background:#0b1220;z-index:20;display:none;flex-direction:column}
@@ -454,7 +455,7 @@ body.street-open .bottombar{position:relative;z-index:25}
     <div class="menu-row"><span class="mi">💎</span><span class="mt"><b>Treasure Hunt</b><span>Many right answers — fill the dots up top · +60 each</span></span></div>
     <div class="menu-row"><span class="mi">💡</span><span class="mt"><b>Hint &amp; New question</b><span>Both live in the ☰ menu, under Play</span></span></div>
   </div>
-  <p class="buildmark">Globe Game · build v62</p>
+  <p class="buildmark">Globe Game · build v63 · updated 2026-11-25</p>
 </div>
 
 <!-- STREET VIEW — real street-level photos from Panoramax & KartaView -->
