@@ -1,0 +1,62 @@
+{
+  "format": "globe-game tile atlases v1",
+  "tileSize": 256,
+  "grid": 8,
+  "zooms": [
+    4,
+    5
+  ],
+  "slotRule": "zoom 4: slot = y*16 + x; zoom 5: slot = 256 + y*32 + x; atlas = slot // 64; cell = slot % 64; col = cell % 8; row = cell // 8",
+  "providers": {
+    "esri": {
+      "atlases": [
+        "esri-0.jpg",
+        "esri-1.jpg",
+        "esri-2.jpg",
+        "esri-3.jpg",
+        "esri-4.jpg",
+        "esri-5.jpg",
+        "esri-6.jpg",
+        "esri-7.jpg",
+        "esri-8.jpg",
+        "esri-9.jpg",
+        "esri-10.jpg",
+        "esri-11.jpg",
+        "esri-12.jpg",
+        "esri-13.jpg",
+        "esri-14.jpg",
+        "esri-15.jpg",
+        "esri-16.jpg",
+        "esri-17.jpg",
+        "esri-18.jpg",
+        "esri-19.jpg"
+      ],
+      "tiles": 1280
+    },
+    "osm": {
+      "atlases": [
+        "osm-0.jpg",
+        "osm-1.jpg",
+        "osm-2.jpg",
+        "osm-3.jpg",
+        "osm-4.jpg",
+        "osm-5.jpg",
+        "osm-6.jpg",
+        "osm-7.jpg",
+        "osm-8.jpg",
+        "osm-9.jpg",
+        "osm-10.jpg",
+        "osm-11.jpg",
+        "osm-12.jpg",
+        "osm-13.jpg",
+        "osm-14.jpg",
+        "osm-15.jpg",
+        "osm-16.jpg",
+        "osm-17.jpg",
+        "osm-18.jpg",
+        "osm-19.jpg"
+      ],
+      "tiles": 1280
+    }
+  }
+}
